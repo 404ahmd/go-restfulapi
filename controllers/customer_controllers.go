@@ -3,100 +3,76 @@ package controllers
 import (
 	"go-restfulapi/config"
 	"go-restfulapi/models"
-	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
-func GetCustomer(c *gin.Context){
+func GetCustomer(c *gin.Context) {
 	var customers []models.Customer
-	config.DB.Find(&customers)
-	c.JSON(http.StatusOK, gin.H{
-		"status" : "success",
-		"data" : customers,
-		"total" : len(customers),
-	})
+	if err := config.DB.Find(&customers).Error; err != nil{
+		config.InternalError(c, "Terjadi kesalahan di server", err.Error())
+		return
+	}
+	config.OK(c, "Semua data customer berhasil diambil", customers)
 }
 
-func GetCustomerById(c *gin.Context){
+func GetCustomerById(c *gin.Context) {
 	var customer models.Customer
 	id := c.Param("id")
 
-	if err := config.DB.Find(&customer, id).Error; err != nil{
-		c.JSON(http.StatusNotFound, gin.H{
-			"status": "error",
-			"message": "Customer not found",
-		})
+	if err := config.DB.First(&customer, id).Error; err != nil {
+		config.NotFound(c, "Customer not found", err.Error())
 		return
-	} 
-
-	c.JSON(http.StatusOK, gin.H{
-		"status":"success",
-		"data": customer,
-	})
-}
-
-func CreateCustomer(c *gin.Context){
-	var input struct{
-		Username string `json:"username" binding:"required"`
-		Fullname string `json:"fullname" binding:"required"`
-		Email string `json:"email" binding:"required"`
-		Age int64 `json:"age" binding:"required"`
-		Address string `json:"address" binding:"required"`
-		Gender string `json:"gender" binding:"required"`
 	}
 
+	config.OK(c, "Customer found", customer)
+}
+
+func CreateCustomer(c *gin.Context) {
+	var input models.CreateCustomerRequest
+
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"status" : "error",
-			"message" : err.Error(),
-		})
+		config.BadRequest(c, "Parameter not accepted", err.Error())
+		return
+	}
+
+	var existingCustomer models.Customer
+	if err := config.DB.Where("username = ? ", input.Username).First(&existingCustomer).Error; err != nil {
+		config.BadRequest(c, "Username Already Registered", err.Error())
+		return
+	}
+
+	if err := config.DB.Where("email = ? ", input.Email).First(&existingCustomer).Error; err!=nil {
+		config.BadRequest(c, "Email Already Registered", err.Error())
 		return
 	}
 
 	customer := models.Customer{
 		Username: input.Username,
 		Fullname: input.Fullname,
-		Email: input.Email,
-		Age: input.Age,
-		Address: input.Address,
-		Gender: input.Gender,
+		Email:    input.Email,
+		Age:      input.Age,
+		Address:  input.Address,
+		Gender:   input.Gender,
 	}
 
 	config.DB.Create(&customer)
-	c.JSON(http.StatusCreated, gin.H{
-		"status" : "success",
-		"message" : "Customer created successfully",
-		"data" : customer,
-	})
+	config.Created(c, "Customer created successfully", customer)
 }
 
-func UpdateCustomer(c *gin.Context){
+func UpdateCustomer(c *gin.Context) {
 	var customer models.Customer
 	id := c.Param("id")
 
 	if err := config.DB.First(&customer, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"status": "error",
-			"message": "Customer not found",
-		})
+		config.NotFound(c, "Customer not found", err.Error())
 		return
 	}
 
-	var input struct{
-		Username string `json:"username"`
-		Fullname string `json:"fullname"`
-		Email string `json:"email"`
-		Age int64 `json:"age"`
-		Address string `json:"address"`
-		Gender string `json:"gender"`
-	}
+	var input models.UpdateCustomerRequest
 
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"status":"error",
-			"message":err.Error(),
-		})
+		config.BadRequest(c, "Parameter not accepted", err.Error())
 		return
 	}
 
@@ -125,30 +101,19 @@ func UpdateCustomer(c *gin.Context){
 	}
 
 	config.DB.Save(&customer)
-	c.JSON(http.StatusOK, gin.H{
-		"status": "success",
-		"message": "Customer data successfully updated",
-		"data": customer,
-	})
+	config.OK(c, "Customer updated successfully", customer)
 
 }
 
-func DeleteCustomerById(c *gin.Context){
+func DeleteCustomerById(c *gin.Context) {
 	var customer models.Customer
 	id := c.Param("id")
 
 	if err := config.DB.First(&customer, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"status": "error",
-			"message": "Product not found",
-		})
+		config.NotFound(c, "Customer Not Found", err.Error())
 		return
 	}
 
 	config.DB.Delete(&customer)
-	c.JSON(http.StatusOK, gin.H{
-		"status": "success",
-		"message": "Customer deleted successfully",
-	})
+	config.OK(c, "Customer successfully deleted", customer)
 }
-

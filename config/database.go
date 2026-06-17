@@ -12,7 +12,7 @@ import (
 
 var DB *gorm.DB
 
-func ConnectDatabase(){
+func ConnectDatabase() {
 	err := godotenv.Load()
 	if err != nil {
 		fmt.Println("Warning, file .env not found, using default value")
@@ -40,7 +40,7 @@ func ConnectDatabase(){
 	}
 
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
-        dbUser, dbPassword, dbHost, dbPort, dbName)
+		dbUser, dbPassword, dbHost, dbPort, dbName)
 
 	database, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
@@ -49,6 +49,7 @@ func ConnectDatabase(){
 
 	database.AutoMigrate(&models.Product{})
 	database.AutoMigrate(&models.Customer{})
+	database.AutoMigrate(&models.User{})
 
 	DB = database
 	fmt.Println("Database connected")

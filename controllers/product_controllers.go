@@ -3,90 +3,69 @@ package controllers
 import (
 	"go-restfulapi/config"
 	"go-restfulapi/models"
-	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
-func GetProducts(c *gin.Context){
+func GetProducts(c *gin.Context) {
 	var products []models.Product
-	config.DB.Find(&products)
-	c.JSON(http.StatusOK, gin.H{
-		"status" : "success",
-		"data" : products,
-		"total" : len(products),
-	})
+	if err := config.DB.Find(&products).Error; err != nil{
+		config.InternalError(c, "Failed while get customer data", err.Error())
+		return
+	}
+	config.OK(c, "Semua data customer berhasil diambil", products)
 }
 
-func GetProductById(c *gin.Context){
+func GetProductById(c *gin.Context) {
 	var product models.Product
 	id := c.Param("id")
 
 	if err := config.DB.First(&product, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"status" : "error",
-			"message" : "Product not found",
-		})
+		config.NotFound(c, "Product Not Found", err.Error())
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"status": "success",
-		"data" : product,
-	})
+	config.OK(c, "Product Found", product)
 }
 
-func CreateProduct(c *gin.Context){
-	var input struct{
-		Name string `json:"name" binding:"required"`
+func CreateProduct(c *gin.Context) {
+	var input struct {
+		Name  string  `json:"name" binding:"required"`
 		Price float64 `json:"price" binding:"required"`
-		Stock int `json:"stock" binding:"required"`
+		Stock int     `json:"stock" binding:"required"`
 	}
 
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"status" : "error",
-			"message" : err.Error(),
-		})
+		config.BadRequest(c, "Parameter Not Accepted", err.Error())
 		return
 	}
 
 	product := models.Product{
-		Name: input.Name,
+		Name:  input.Name,
 		Price: input.Price,
 		Stock: input.Stock,
 	}
 
 	config.DB.Create(&product)
-	c.JSON(http.StatusCreated, gin.H{
-		"status" : "success",
-		"message" : "Product created successfully",
-		"data" : product,
-	})
+	config.OK(c, "Product Created Successfully", product)
 }
 
-func UpdateProduct(c *gin.Context){
+func UpdateProduct(c *gin.Context) {
 	var product models.Product
 	id := c.Param("id")
 	if err := config.DB.First(&product, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"status" : "error",
-			"message" : "Product not found",
-		})
+		config.NotFound(c, "Product Not Found", err.Error())
 		return
 	}
 
-	var input struct{
-		Name string `json:"name"`
+	var input struct {
+		Name  string  `json:"name"`
 		Price float64 `json:"price"`
-		Stock int `json:"stock"`
+		Stock int     `json:"stock"`
 	}
 
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"status" : "error",
-			"message" : err.Error(),
-		})
+		config.BadRequest(c, "Paramater Not Accepted", err.Error())
 		return
 	}
 
@@ -103,28 +82,18 @@ func UpdateProduct(c *gin.Context){
 	}
 
 	config.DB.Save(&product)
-	c.JSON(http.StatusOK, gin.H{
-		"status": "success",
-		"message": "Data updated successfully",
-		"data": product, 
-	})
+	config.OK(c, "Product Updated Successfully", product)
 }
 
-func DeleteProductById(c *gin.Context){
+func DeleteProductById(c *gin.Context) {
 	var product models.Product
 	id := c.Param("id")
 
 	if err := config.DB.First(&product, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"status": "error",
-			"message": "Product not found",
-		})
+		config.NotFound(c, "Product Not Found", err.Error())
 		return
 	}
 
 	config.DB.Delete(&product)
-	c.JSON(http.StatusOK, gin.H{
-		"status": "success",
-		"message": "Product deleted successfully",
-	})
+	config.OK(c, "Product Deleted Successfully", product)
 }

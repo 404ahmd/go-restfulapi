@@ -5,7 +5,7 @@ import (
 	"go-restfulapi/routes"
 )
 
-func main(){
+func main() {
 	config.ConnectDatabase()
 
 	router := routes.SetupRouter()
